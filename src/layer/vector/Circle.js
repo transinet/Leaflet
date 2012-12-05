@@ -7,8 +7,13 @@ L.Circle = L.Path.extend({
 		L.Path.prototype.initialize.call(this, options);
 
 		this._latlng = L.latLng(latlng);
-		this._mRadius = radius;
-		
+
+		if (this.options.limit > radius) {
+			this._mRadius = radius;
+		} else {
+			this._mRadius = this.options.limit;
+		}
+
 		if (L.Handler.CircleDrag) {
 			this.dragging = new L.Handler.CircleDrag(this);
 
@@ -16,9 +21,9 @@ L.Circle = L.Path.extend({
 				this.dragging.enable();
 			}
 		}
-		
+
 		if (L.Handler.CircleResize) {
-			this.resizing = new L.Handler.CircleResize(this);
+			this.resizing = new L.Handler.CircleResize(this, {limit: options.limit});
 
 			if (this.options.resizable) {
 				this.resizing.enable();
@@ -36,7 +41,7 @@ L.Circle = L.Path.extend({
 			this.resizing.addHooks();
 		}
 	},
-	
+
 	onRemove: function (map) {
 		if (this.dragging && this.dragging.enabled()) {
 			this.dragging.removeHooks();
@@ -45,10 +50,10 @@ L.Circle = L.Path.extend({
 		if (this.resizing && this.resizing.enabled()) {
 			this.resizing.removeHooks();
 		}
-        
+
 		L.Path.prototype.onRemove.call(this, map);
 	},
-    
+
 	options: {
 		fill: true
 	},
@@ -59,7 +64,12 @@ L.Circle = L.Path.extend({
 	},
 
 	setRadius: function (radius) {
-		this._mRadius = radius;
+		if (this.options.limit > radius) {
+			this._mRadius = radius;
+		} else {
+			this._mRadius = this.options.limit;
+		}
+
 		return this.redraw();
 	},
 

@@ -85,17 +85,29 @@ L.Handler.CircleResize = L.Handler.extend({
 
     _onDrag: function (e) {
         var circleCenter = this._circle.getLatLng(),
-            centerPos = this._circle._map.project(circleCenter),
-            handlerXY = this._circle._map.project(e.target.getLatLng()),
+            map = this._circle._map,
+            centerPos = map.project(circleCenter),
+            handlerXY = map.project(e.target.getLatLng()),
             handlerPos = {
                 x: handlerXY.x,
                 y: handlerXY.y
             },
             radiusInPix = Math.sqrt(Math.pow(centerPos.x - handlerPos.x, 2) + Math.pow(centerPos.y - handlerPos.y, 2)),
-            point = new L.Point(centerPos.x + radiusInPix, centerPos.y);
+            point = new L.Point(centerPos.x + radiusInPix, centerPos.y),
+            newRadius = circleCenter.distanceTo(this._circle._map.unproject(point)),
+            limit = this.options.limit;
 
-        this._circle.setRadius(circleCenter.distanceTo(this._circle._map.unproject(point)));
+        if (limit && limit > newRadius) {
+            this._circle.setRadius(newRadius);
+        } else {
+            this._circle.setRadius(limit);
+            var originh = this._origins.handler,
+                hpoint = new L.Point(originh.x, originh.y);
+            this._dragHandler.setLatLng(map.unproject(hpoint));
+        }
+
         this._circle.fire('resize');
+        this._setOrigins();
     },
 
     _onDragEnd: function () {

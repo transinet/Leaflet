@@ -95,12 +95,12 @@ L.Handler.CircleResize = L.Handler.extend({
             radiusInPix = Math.sqrt(Math.pow(centerPos.x - handlerPos.x, 2) + Math.pow(centerPos.y - handlerPos.y, 2)),
             point = new L.Point(centerPos.x + radiusInPix, centerPos.y),
             newRadius = circleCenter.distanceTo(this._circle._map.unproject(point)),
-            limit = this.options.limit;
+            maxLimit = this.options.max_limit,
+            minLimit = this.options.min_limit;
 
-        if (limit && limit > newRadius) {
-            this._circle.setRadius(newRadius);
-        } else {
-            this._circle.setRadius(limit);
+        this._circle.setRadius(newRadius);
+
+        if ((maxLimit && newRadius > maxLimit) || (minLimit && newRadius < minLimit)) {
             var originh = this._origins.handler,
                 hpoint = new L.Point(originh.x, originh.y);
             this._dragHandler.setLatLng(map.unproject(hpoint));

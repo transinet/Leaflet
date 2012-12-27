@@ -8,11 +8,7 @@ L.Circle = L.Path.extend({
 
 		this._latlng = L.latLng(latlng);
 
-		if (this.options.limit > radius) {
-			this._mRadius = radius;
-		} else {
-			this._mRadius = this.options.limit;
-		}
+		this._mRadius = this._limitRadius(radius);
 
 		if (L.Handler.CircleDrag) {
 			this.dragging = new L.Handler.CircleDrag(this);
@@ -23,7 +19,7 @@ L.Circle = L.Path.extend({
 		}
 
 		if (L.Handler.CircleResize) {
-			this.resizing = new L.Handler.CircleResize(this, {limit: options.limit});
+			this.resizing = new L.Handler.CircleResize(this, options);
 
 			if (this.options.resizable) {
 				this.resizing.enable();
@@ -64,11 +60,7 @@ L.Circle = L.Path.extend({
 	},
 
 	setRadius: function (radius) {
-		if (this.options.limit > radius) {
-			this._mRadius = radius;
-		} else {
-			this._mRadius = this.options.limit;
-		}
+		this._mRadius = this._limitRadius(radius);
 
 		return this.redraw();
 	},
@@ -117,6 +109,21 @@ L.Circle = L.Path.extend({
 
 	getRadius: function () {
 		return this._mRadius;
+	},
+
+	_limitRadius: function (radius) {
+		var tooBig = this.options.max_limit < radius,
+		    tooSmall = this.options.min_limit > radius;
+
+		if (!tooBig && !tooSmall) {
+			return radius;
+		} else {
+			if (tooBig) {
+				return this.options.max_limit;
+			} else {
+				return this.options.min_limit;
+			}
+		}
 	},
 
 	// TODO Earth hardcoded, move into projection code!

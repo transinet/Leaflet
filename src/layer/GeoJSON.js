@@ -1,4 +1,9 @@
+/*
+ * L.GeoJSON turns any GeoJSON data into a Leaflet layer.
+ */
+
 L.GeoJSON = L.FeatureGroup.extend({
+
 	initialize: function (geojson, options) {
 		L.setOptions(this, options);
 
@@ -27,6 +32,7 @@ L.GeoJSON = L.FeatureGroup.extend({
 		var layer = L.GeoJSON.geometryToLayer(geojson, options.pointToLayer);
 		layer.feature = geojson;
 
+		layer.defaultOptions = layer.options;
 		this.resetStyle(layer);
 
 		if (options.onEachFeature) {
@@ -39,6 +45,9 @@ L.GeoJSON = L.FeatureGroup.extend({
 	resetStyle: function (layer) {
 		var style = this.options.style;
 		if (style) {
+			// reset any custom styles
+			L.Util.extend(layer.options, layer.defaultOptions);
+
 			this._setLayerStyle(layer, style);
 		}
 	},
@@ -111,7 +120,7 @@ L.extend(L.GeoJSON, {
 		var lat = parseFloat(coords[reverse ? 0 : 1]),
 		    lng = parseFloat(coords[reverse ? 1 : 0]);
 
-		return new L.LatLng(lat, lng, true);
+		return new L.LatLng(lat, lng);
 	},
 
 	coordsToLatLngs: function (coords, levelsDeep, reverse) { // (Array, Number, Boolean) -> Array

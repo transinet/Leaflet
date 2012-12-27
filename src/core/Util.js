@@ -1,5 +1,5 @@
 /*
- * L.Util is a namespace for various utility functions.
+ * L.Util contains various utility functions used throughout Leaflet code.
  */
 
 L.Util = {

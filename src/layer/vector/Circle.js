@@ -7,7 +7,47 @@ L.Circle = L.Path.extend({
 		L.Path.prototype.initialize.call(this, options);
 
 		this._latlng = L.latLng(latlng);
-		this._mRadius = radius;
+
+		this._mRadius = this._limitRadius(radius);
+
+		if (L.Handler.CircleDrag) {
+			this.dragging = new L.Handler.CircleDrag(this);
+
+			if (this.options.draggable) {
+				this.dragging.enable();
+			}
+		}
+
+		if (L.Handler.CircleResize) {
+			this.resizing = new L.Handler.CircleResize(this, options);
+
+			if (this.options.resizable) {
+				this.resizing.enable();
+			}
+		}
+	},
+
+	onAdd: function (map) {
+		L.Path.prototype.onAdd.call(this, map);
+
+		if (this.dragging && this.dragging.enabled()) {
+			this.dragging.addHooks();
+		}
+		if (this.resizing && this.resizing.enabled()) {
+			this.resizing.addHooks();
+		}
+	},
+
+	onRemove: function (map) {
+		if (this.dragging && this.dragging.enabled()) {
+			this.dragging.removeHooks();
+		}
+
+		if (this.resizing && this.resizing.enabled()) {
+			this.resizing.removeHooks();
+		}
+
+		L.Path.prototype.onRemove.call(this, map);
 	},
 
 	options: {
@@ -20,13 +60,14 @@ L.Circle = L.Path.extend({
 	},
 
 	setRadius: function (radius) {
-		this._mRadius = radius;
+		this._mRadius = this._limitRadius(radius);
+
 		return this.redraw();
 	},
 
 	projectLatlngs: function () {
 		var lngRadius = this._getLngRadius(),
-		    latlng2 = new L.LatLng(this._latlng.lat, this._latlng.lng - lngRadius, true),
+		    latlng2 = new L.LatLng(this._latlng.lat, this._latlng.lng - lngRadius),
 		    point2 = this._map.latLngToLayerPoint(latlng2);
 
 		this._point = this._map.latLngToLayerPoint(this._latlng);
@@ -68,6 +109,21 @@ L.Circle = L.Path.extend({
 
 	getRadius: function () {
 		return this._mRadius;
+	},
+
+	_limitRadius: function (radius) {
+		var tooBig = this.options.max_limit < radius,
+		    tooSmall = this.options.min_limit > radius;
+
+		if (!tooBig && !tooSmall) {
+			return radius;
+		} else {
+			if (tooBig) {
+				return this.options.max_limit;
+			} else {
+				return this.options.min_limit;
+			}
+		}
 	},
 
 	// TODO Earth hardcoded, move into projection code!

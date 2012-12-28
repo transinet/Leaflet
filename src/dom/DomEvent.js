@@ -132,7 +132,7 @@ L.DomEvent = {
 		    y = e.clientY + body.scrollTop,
 		    pos = new L.Point(x, y);
 
-		return pos;
+		return (container ? pos._subtract(L.DomUtil.getViewportOffset(container)) : pos);
 	},
 
 	getWheelDelta: function (e) {

@@ -1,16 +1,19 @@
 /*
- * Popup extension to L.Path (polylines, polygons, circles), adding bindPopup method.
+ * Popup extension to L.Path (polylines, polygons, circles), adding popup-related methods.
  */
 
 L.Path.include({
 
 	bindPopup: function (content, options) {
 
-		if (!this._popup || options) {
-			this._popup = new L.Popup(options, this);
+		if (content instanceof L.Popup) {
+			this._popup = content;
+		} else {
+			if (!this._popup || options) {
+				this._popup = new L.Popup(options, this);
+			}
+			this._popup.setContent(content);
 		}
-
-		this._popup.setContent(content);
 
 		if (!this._popupHandlersAdded) {
 			this
@@ -27,7 +30,7 @@ L.Path.include({
 		if (this._popup) {
 			this._popup = null;
 			this
-			    .off('click', this.openPopup)
+			    .off('click', this._openPopup)
 			    .off('remove', this.closePopup);
 
 			this._popupHandlersAdded = false;

@@ -1,21 +1,29 @@
+/*
+ * L.DivIcon is a lightweight HTML-based icon class (as opposed to the image-based L.Icon)
+ * to use with L.Marker.
+ */
+
 L.DivIcon = L.Icon.extend({
 	options: {
-		iconSize: new L.Point(12, 12), // also can be set through CSS
+		iconSize: [12, 12], // also can be set through CSS
 		/*
 		iconAnchor: (Point)
 		popupAnchor: (Point)
 		html: (String)
 		bgPos: (Point)
 		*/
-		className: 'leaflet-div-icon'
+		className: 'leaflet-div-icon',
+		html: false
 	},
 
-	createIcon: function () {
-		var div = document.createElement('div'),
+	createIcon: function (oldIcon) {
+		var div = (oldIcon && oldIcon.tagName === 'DIV') ? oldIcon : document.createElement('div'),
 		    options = this.options;
 
-		if (options.html) {
+		if (options.html !== false) {
 			div.innerHTML = options.html;
+		} else {
+			div.innerHTML = '';
 		}
 
 		if (options.bgPos) {

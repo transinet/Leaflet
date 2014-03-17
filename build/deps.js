@@ -22,7 +22,6 @@ var deps = {
 		desc: 'The core of the library, including OOP, events, DOM facilities, basic units, projections (EPSG:3857 and EPSG:4326) and the base Map class.'
 	},
 
-
 	EPSG3395: {
 		src: ['geo/projection/Projection.Mercator.js',
 		      'geo/crs/CRS.EPSG3395.js'],
@@ -54,7 +53,9 @@ var deps = {
 	},
 
 	Marker: {
-		src: ['layer/marker/Icon.js', 'layer/marker/Icon.Default.js', 'layer/marker/Marker.js'],
+		src: ['layer/marker/Icon.js',
+		      'layer/marker/Icon.Default.js',
+		      'layer/marker/Marker.js'],
 		desc: 'Markers to put on the map.'
 	},
 
@@ -65,7 +66,8 @@ var deps = {
 	},
 
 	Popup: {
-		src: ['layer/Popup.js', 'layer/marker/Marker.Popup.js', 'map/ext/Map.Popup.js'],
+		src: ['layer/Popup.js',
+		      'layer/marker/Marker.Popup.js'],
 		deps: ['Marker'],
 		desc: 'Used to display the map popup (used mostly for binding HTML data to markers and paths on click).'
 	},
@@ -81,9 +83,10 @@ var deps = {
 		desc: 'Extends LayerGroup with mouse events and bindPopup method shared between layers.'
 	},
 
-
 	Path: {
-		src: ['layer/vector/Path.js', 'layer/vector/Path.SVG.js', 'layer/vector/Path.Popup.js'],
+		src: ['layer/vector/Path.js',
+		      'layer/vector/Path.SVG.js',
+		      'layer/vector/Path.Popup.js'],
 		desc: 'Vector rendering core (SVG-powered), enables overlaying the map with SVG paths.',
 		heading: 'Vector layers'
 	},
@@ -100,13 +103,15 @@ var deps = {
 	},
 
 	Polyline: {
-		src: ['geometry/LineUtil.js', 'layer/vector/Polyline.js'],
+		src: ['geometry/LineUtil.js',
+		      'layer/vector/Polyline.js'],
 		deps: ['Path'],
 		desc: 'Polyline overlays.'
 	},
 
 	Polygon: {
-		src: ['geometry/PolyUtil.js', 'layer/vector/Polygon.js'],
+		src: ['geometry/PolyUtil.js',
+		      'layer/vector/Polygon.js'],
 		deps: ['Polyline'],
 		desc: 'Polygon overlays.'
 	},
@@ -138,14 +143,15 @@ var deps = {
 	VectorsCanvas: {
 		src: ['layer/vector/canvas/Polyline.Canvas.js',
 		      'layer/vector/canvas/Polygon.Canvas.js',
-		      'layer/vector/canvas/Circle.Canvas.js'],
-		deps: ['PathCanvas', 'Polyline', 'Polygon', 'Circle'],
-		desc: 'Canvas fallback for vector layers (polygons, polylines, circles)'
+		      'layer/vector/canvas/Circle.Canvas.js',
+		      'layer/vector/canvas/CircleMarker.Canvas.js'],
+		deps: ['PathCanvas', 'Polyline', 'Polygon', 'Circle', 'CircleMarker'],
+		desc: 'Canvas fallback for vector layers (polygons, polylines, circles, circlemarkers)'
 	},
 
 	GeoJSON: {
 		src: ['layer/GeoJSON.js'],
-		deps: ['Marker', 'MultiPoly', 'FeatureGroup'],
+		deps: ['CircleMarker', 'Marker', 'MultiPoly', 'FeatureGroup'],
 		desc: 'GeoJSON layer, parses the data and adds corresponding layers above.'
 	},
 
@@ -170,11 +176,12 @@ var deps = {
 	TouchZoom: {
 		src: ['dom/DomEvent.js',
 		      'dom/DomEvent.DoubleTap.js',
-		      'dom/DomEvent.MsTouch.js',
+		      'dom/DomEvent.Pointer.js',
 		      'core/Handler.js',
-		      'map/handler/Map.TouchZoom.js'],
-		deps: ['MapAnimationZoom'],
-		desc: 'Enables smooth touch zooming on iOS and IE10 and double tap on iOS/IE10/Android.'
+		      'map/handler/Map.TouchZoom.js',
+		      'map/handler/Map.Tap.js'],
+		deps: ['AnimationZoom'],
+		desc: 'Enables smooth touch zoom / tap / longhold / doubletap on iOS, IE10, Android.'
 	},
 
 	BoxZoom: {
@@ -205,16 +212,8 @@ var deps = {
 		desc: 'Makes circles resizables.'
 	},
 	
-	PolyEdit: {
-		src: ['layer/vector/Polyline.Edit.js'],
-		deps: ['Polyline', 'DivIcon'],
-		desc: 'Polyline and polygon editing.'
-	},
-
-
 	ControlZoom: {
 		src: ['control/Control.js',
-		      'map/ext/Map.Control.js',
 		      'control/Control.Zoom.js'],
 		heading: 'Controls',
 		desc: 'Basic zoom control with two buttons (zoom in / zoom out).'
@@ -222,25 +221,21 @@ var deps = {
 
 	ControlAttrib: {
 		src: ['control/Control.js',
-		      'map/ext/Map.Control.js',
 		      'control/Control.Attribution.js'],
 		desc: 'Attribution control.'
 	},
 
 	ControlScale: {
 		src: ['control/Control.js',
-		      'map/ext/Map.Control.js',
 		      'control/Control.Scale.js'],
 		desc: 'Scale control.'
 	},
 
 	ControlLayers: {
 		src: ['control/Control.js',
-		      'map/ext/Map.Control.js',
 		      'control/Control.Layers.js'],
 		desc: 'Layer Switcher control.'
 	},
-
 
 	AnimationPan: {
 		src: [
@@ -248,7 +243,7 @@ var deps = {
 			'dom/PosAnimation.js',
 			'map/anim/Map.PanAnimation.js'
 			],
-		deps: ['AnimationPan'],
+		heading: 'Animation',
 		desc: 'Core panning animation support.'
 	},
 
@@ -259,7 +254,7 @@ var deps = {
 	},
 
 	AnimationZoom: {
-		src: ['map/anim/Map.ZoomAnimation.js'],
+		src: ['map/anim/Map.ZoomAnimation.js', 'layer/tile/TileLayer.Anim.js'],
 		deps: ['AnimationPan'],
 		desc: 'Smooth zooming animation. Works only on browsers that support CSS3 Transitions.'
 	},

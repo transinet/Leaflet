@@ -1,26 +1,37 @@
+/*
+ * L.Control.Zoom is used for the default zoom buttons on the map.
+ */
+
 L.Control.Zoom = L.Control.extend({
 	options: {
-		position: 'topleft'
+		position: 'topleft',
+		zoomInText: '+',
+		zoomInTitle: 'Zoom in',
+		zoomOutText: '-',
+		zoomOutTitle: 'Zoom out'
 	},
 
 	onAdd: function (map) {
-		var className = 'leaflet-control-zoom',
-		    container = L.DomUtil.create('div', className);
+		var zoomName = 'leaflet-control-zoom',
+		    container = L.DomUtil.create('div', zoomName + ' leaflet-bar');
 
 		this._map = map;
 
-		this._zoomInButton = this._createButton(
-		        '+', 'Zoom in',  className + '-in',  container, this._zoomIn,  this);
+		this._zoomInButton  = this._createButton(
+		        this.options.zoomInText, this.options.zoomInTitle,
+		        zoomName + '-in',  container, this._zoomIn,  this);
 		this._zoomOutButton = this._createButton(
-		        '-', 'Zoom out', className + '-out', container, this._zoomOut, this);
+		        this.options.zoomOutText, this.options.zoomOutTitle,
+		        zoomName + '-out', container, this._zoomOut, this);
 
-		map.on('zoomend', this._updateDisabled, this);
+		this._updateDisabled();
+		map.on('zoomend zoomlevelschange', this._updateDisabled, this);
 
 		return container;
 	},
 
 	onRemove: function (map) {
-		map.off('zoomend', this._updateDisabled, this);
+		map.off('zoomend zoomlevelschange', this._updateDisabled, this);
 	},
 
 	_zoomIn: function (e) {
@@ -37,19 +48,22 @@ L.Control.Zoom = L.Control.extend({
 		link.href = '#';
 		link.title = title;
 
+		var stop = L.DomEvent.stopPropagation;
+
 		L.DomEvent
-		    .on(link, 'click', L.DomEvent.stopPropagation)
-		    .on(link, 'mousedown', L.DomEvent.stopPropagation)
-		    .on(link, 'dblclick', L.DomEvent.stopPropagation)
+		    .on(link, 'click', stop)
+		    .on(link, 'mousedown', stop)
+		    .on(link, 'dblclick', stop)
 		    .on(link, 'click', L.DomEvent.preventDefault)
-		    .on(link, 'click', fn, context);
+		    .on(link, 'click', fn, context)
+		    .on(link, 'click', this._refocusOnMap, context);
 
 		return link;
 	},
 
 	_updateDisabled: function () {
 		var map = this._map,
-			className = 'leaflet-control-zoom-disabled';
+			className = 'leaflet-disabled';
 
 		L.DomUtil.removeClass(this._zoomInButton, className);
 		L.DomUtil.removeClass(this._zoomOutButton, className);

@@ -3,6 +3,8 @@
  * and polylines (clipping, simplification, distances, etc.)
  */
 
+/*jshint bitwise:false */ // allow bitwise operations for this file
+
 L.LineUtil = {
 
 	// Simplify polyline with vertex reduction and Douglas-Peucker simplification.
@@ -94,16 +96,11 @@ L.LineUtil = {
 		return reducedPoints;
 	},
 
-	/*jshint bitwise:false */ // temporarily allow bitwise oprations
-
 	// Cohen-Sutherland line clipping algorithm.
 	// Used to avoid rendering parts of a polyline that are not currently visible.
 
 	clipSegment: function (a, b, bounds, useLastCode) {
-		var min = bounds.min,
-		    max = bounds.max,
-
-		    codeA = useLastCode ? this._lastCode : this._getBitCode(a, bounds),
+		var codeA = useLastCode ? this._lastCode : this._getBitCode(a, bounds),
 		    codeB = this._getBitCode(b, bounds),
 
 		    codeOut, p, newCode;
@@ -120,8 +117,8 @@ L.LineUtil = {
 				return false;
 			// other cases
 			} else {
-				codeOut = codeA || codeB,
-				p = this._getEdgeIntersection(a, b, codeOut, bounds),
+				codeOut = codeA || codeB;
+				p = this._getEdgeIntersection(a, b, codeOut, bounds);
 				newCode = this._getBitCode(p, bounds);
 
 				if (codeOut === codeA) {
@@ -168,8 +165,6 @@ L.LineUtil = {
 
 		return code;
 	},
-
-	/*jshint bitwise:true */
 
 	// square distance (to avoid unnecessary Math.sqrt calls)
 	_sqDist: function (p1, p2) {

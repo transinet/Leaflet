@@ -1,8 +1,12 @@
+/*
+ * Mercator projection that takes into account that the Earth is not a perfect sphere.
+ * Less popular than spherical mercator; used by projections like EPSG:3395.
+ */
 
 L.Projection.Mercator = {
 	MAX_LATITUDE: 85.0840591556,
 
-	R_MINOR: 6356752.3142,
+	R_MINOR: 6356752.314245179,
 	R_MAJOR: 6378137,
 
 	project: function (latlng) { // (LatLng) -> Point
@@ -20,7 +24,7 @@ L.Projection.Mercator = {
 		con = Math.pow((1 - con) / (1 + con), eccent * 0.5);
 
 		var ts = Math.tan(0.5 * ((Math.PI * 0.5) - y)) / con;
-		y = -r2 * Math.log(ts);
+		y = -r * Math.log(ts);
 
 		return new L.Point(x, y);
 	},
@@ -32,7 +36,7 @@ L.Projection.Mercator = {
 		    lng = point.x * d / r,
 		    tmp = r2 / r,
 		    eccent = Math.sqrt(1 - (tmp * tmp)),
-		    ts = Math.exp(- point.y / r2),
+		    ts = Math.exp(- point.y / r),
 		    phi = (Math.PI / 2) - 2 * Math.atan(ts),
 		    numIter = 15,
 		    tol = 1e-7,
@@ -47,6 +51,6 @@ L.Projection.Mercator = {
 			phi += dphi;
 		}
 
-		return new L.LatLng(phi * d, lng, true);
+		return new L.LatLng(phi * d, lng);
 	}
 };

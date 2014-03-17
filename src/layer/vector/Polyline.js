@@ -1,17 +1,12 @@
+/*
+ * L.Polyline is used to display polylines on a map.
+ */
+
 L.Polyline = L.Path.extend({
 	initialize: function (latlngs, options) {
 		L.Path.prototype.initialize.call(this, options);
 
 		this._latlngs = this._convertLatLngs(latlngs);
-
-		// TODO refactor: move to Polyline.Edit.js
-		if (L.Handler.PolyEdit) {
-			this.editing = new L.Handler.PolyEdit(this);
-
-			if (this.options.editable) {
-				this.editing.enable();
-			}
-		}
 	},
 
 	options: {
@@ -50,9 +45,9 @@ L.Polyline = L.Path.extend({
 		return this.redraw();
 	},
 
-	spliceLatLngs: function (index, howMany) {
+	spliceLatLngs: function () { // (Number index, Number howMany)
 		var removed = [].splice.apply(this._latlngs, arguments);
-		this._convertLatLngs(this._latlngs);
+		this._convertLatLngs(this._latlngs, true);
 		this.redraw();
 		return removed;
 	},
@@ -79,43 +74,19 @@ L.Polyline = L.Path.extend({
 	},
 
 	getBounds: function () {
-		var bounds = new L.LatLngBounds(),
-		    latLngs = this.getLatLngs(),
-		    i, len;
-
-		for (i = 0, len = latLngs.length; i < len; i++) {
-			bounds.extend(latLngs[i]);
-		}
-
-		return bounds;
+		return new L.LatLngBounds(this.getLatLngs());
 	},
 
-	// TODO refactor: move to Polyline.Edit.js
-	onAdd: function (map) {
-		L.Path.prototype.onAdd.call(this, map);
+	_convertLatLngs: function (latlngs, overwrite) {
+		var i, len, target = overwrite ? latlngs : [];
 
-		if (this.editing && this.editing.enabled()) {
-			this.editing.addHooks();
-		}
-	},
-
-	onRemove: function (map) {
-		if (this.editing && this.editing.enabled()) {
-			this.editing.removeHooks();
-		}
-
-		L.Path.prototype.onRemove.call(this, map);
-	},
-
-	_convertLatLngs: function (latlngs) {
-		var i, len;
 		for (i = 0, len = latlngs.length; i < len; i++) {
-			if (latlngs[i] instanceof Array && typeof latlngs[i][0] !== 'number') {
+			if (L.Util.isArray(latlngs[i]) && typeof latlngs[i][0] !== 'number') {
 				return;
 			}
-			latlngs[i] = L.latLng(latlngs[i]);
+			target[i] = L.latLng(latlngs[i]);
 		}
-		return latlngs;
+		return target;
 	},
 
 	_initEvents: function () {

@@ -1,14 +1,17 @@
 var fs = require('fs'),
-	uglifyjs = require('uglify-js'),
-	deps = require('./deps.js').deps;
+    jshint = require('jshint'),
+    UglifyJS = require('uglify-js'),
+    zlib = require('zlib'),
 
-exports.getFiles = function (compsBase32) {
+    deps = require('./deps.js').deps;
+
+function getFiles(compsBase32) {
 	var memo = {},
-		comps;
+	    comps;
 
 	if (compsBase32) {
 		comps = parseInt(compsBase32, 32).toString(2).split('');
-		console.log('Managing dependencies...')
+		console.log('Managing dependencies...');
 	}
 
 	function addFiles(srcs) {
@@ -20,15 +23,17 @@ exports.getFiles = function (compsBase32) {
 	for (var i in deps) {
 		if (comps) {
 			if (parseInt(comps.pop(), 2) === 1) {
-				console.log('\t* ' + i);
+				console.log(' * ' + i);
 				addFiles(deps[i].src);
 			} else {
-				console.log('\t  ' + i);
+				console.log('   ' + i);
 			}
 		} else {
 			addFiles(deps[i].src);
 		}
 	}
+
+	console.log('');
 
 	var files = [];
 
@@ -37,43 +42,147 @@ exports.getFiles = function (compsBase32) {
 	}
 
 	return files;
-};
+}
 
-exports.uglify = function (code) {
-	var pro = uglifyjs.uglify;
+exports.getFiles = getFiles;
 
-	var ast = uglifyjs.parser.parse(code);
-	ast = pro.ast_mangle(ast, {mangle: true});
-	ast = pro.ast_squeeze(ast);
-	ast = pro.ast_squeeze_more(ast);
-
-	return pro.gen_code(ast) + ';';
-};
-
-exports.combineFiles = function (files) {
-	var content = '(function (window, undefined) {\n\n';
-	for (var i = 0, len = files.length; i < len; i++) {
-		content += fs.readFileSync(files[i], 'utf8') + '\n\n';
+function getSizeDelta(newContent, oldContent, fixCRLF) {
+	if (!oldContent) {
+		return ' (new)';
 	}
-	return content + '\n\n}(this));';
-};
+	if (newContent === oldContent) {
+		return ' (unchanged)';
+	}
+	if (fixCRLF) {
+		newContent = newContent.replace(/\r\n?/g, '\n');
+		oldContent = oldContent.replace(/\r\n?/g, '\n');
+	}
+	var delta = newContent.length - oldContent.length;
 
-exports.save = function (savePath, compressed) {
-	return fs.writeFileSync(savePath, compressed, 'utf8');
-};
+	return delta === 0 ? '' : ' (' + (delta > 0 ? '+' : '') + delta + ' bytes)';
+}
 
-exports.load = function (loadPath) {
+function loadSilently(path) {
 	try {
-		return fs.readFileSync(loadPath, 'utf8');
+		return fs.readFileSync(path, 'utf8');
 	} catch (e) {
 		return null;
 	}
+}
+
+function combineFiles(files) {
+	var content = '';
+	for (var i = 0, len = files.length; i < len; i++) {
+		content += fs.readFileSync(files[i], 'utf8') + '\n\n';
+	}
+	return content;
+}
+
+function bytesToKB(bytes) {
+    return (bytes / 1024).toFixed(2) + ' KB';
 };
 
-exports.getSizeDelta = function (newContent, oldContent) {
-	if (!oldContent) {
-		return 'new';
+exports.build = function (callback, compsBase32, buildName) {
+
+	var files = getFiles(compsBase32);
+
+	console.log('Concatenating and compressing ' + files.length + ' files...');
+
+	var copy = fs.readFileSync('src/copyright.js', 'utf8'),
+	    intro = '(function (window, document, undefined) {',
+	    outro = '}(window, document));',
+	    newSrc = copy + intro + combineFiles(files) + outro,
+
+	    pathPart = 'dist/leaflet' + (buildName ? '-' + buildName : ''),
+	    srcPath = pathPart + '-src.js',
+
+	    oldSrc = loadSilently(srcPath),
+	    srcDelta = getSizeDelta(newSrc, oldSrc, true);
+
+	console.log('\tUncompressed: ' + bytesToKB(newSrc.length) + srcDelta);
+
+	if (newSrc !== oldSrc) {
+		fs.writeFileSync(srcPath, newSrc);
+		console.log('\tSaved to ' + srcPath);
 	}
-	var delta = newContent.replace(/\r\n?/g, '\n').length - oldContent.replace(/\r\n?/g, '\n').length;
-	return (delta >= 0 ? '+' : '') + delta;
+
+	var path = pathPart + '.js',
+	    oldCompressed = loadSilently(path),
+	    newCompressed = copy + UglifyJS.minify(newSrc, {
+	        warnings: true,
+	        fromString: true
+	    }).code,
+	    delta = getSizeDelta(newCompressed, oldCompressed);
+
+	console.log('\tCompressed: ' + bytesToKB(newCompressed.length) + delta);
+
+	var newGzipped,
+	    gzippedDelta = '';
+
+	function done() {
+		if (newCompressed !== oldCompressed) {
+			fs.writeFileSync(path, newCompressed);
+			console.log('\tSaved to ' + path);
+		}
+		console.log('\tGzipped: ' + bytesToKB(newGzipped.length) + gzippedDelta);
+		callback();
+	}
+
+	zlib.gzip(newCompressed, function (err, gzipped) {
+		if (err) { return; }
+		newGzipped = gzipped;
+		if (oldCompressed && (oldCompressed !== newCompressed)) {
+			zlib.gzip(oldCompressed, function (err, oldGzipped) {
+				if (err) { return; }
+				gzippedDelta = getSizeDelta(gzipped, oldGzipped);
+				done();
+			});
+		} else {
+			done();
+		}
+	});
+};
+
+exports.test = function(callback) {
+	var karma = require('karma'),
+	    testConfig = {configFile : __dirname + '/../spec/karma.conf.js'};
+
+	testConfig.browsers = ['PhantomJS'];
+
+	function isArgv(optName) {
+		return process.argv.indexOf(optName) !== -1;
+	}
+
+	if (isArgv('--chrome')) {
+		testConfig.browsers.push('Chrome');
+	}
+	if (isArgv('--safari')) {
+		testConfig.browsers.push('Safari');
+	}
+	if (isArgv('--ff')) {
+		testConfig.browsers.push('Firefox');
+	}
+	if (isArgv('--ie')) {
+		testConfig.browsers.push('IE');
+	}
+
+	if (isArgv('--cov')) {
+		testConfig.preprocessors = {
+			'../src/**/*.js': 'coverage'
+		};
+		testConfig.coverageReporter = {
+			type : 'html',
+			dir : 'coverage/'
+		};
+		testConfig.reporters = ['coverage'];
+	}
+
+	console.log('Running tests...');
+
+	karma.server.start(testConfig, function(exitCode) {
+		if (!exitCode) {
+			console.log('\tTests ran successfully.\n');
+		}
+		callback();
+	});
 };

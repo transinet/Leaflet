@@ -1,5 +1,5 @@
 /*
- * L.Handler.MapDrag is used internally by L.Map to make the map draggable.
+ * L.Handler.MapDrag is used to make the map draggable (with panning inertia), enabled by default.
  */
 
 L.Map.mergeOptions({
@@ -11,10 +11,8 @@ L.Map.mergeOptions({
 	inertiaThreshold: L.Browser.touch ? 32 : 18, // ms
 	easeLinearity: 0.25,
 
-	longPress: true,
-
 	// TODO refactor, move to CRS
-	worldCopyJump: true
+	worldCopyJump: false
 });
 
 L.Map.Drag = L.Handler.extend({
@@ -22,7 +20,7 @@ L.Map.Drag = L.Handler.extend({
 		if (!this._draggable) {
 			var map = this._map;
 
-			this._draggable = new L.Draggable(map._mapPane, map._container, map.options.longPress);
+			this._draggable = new L.Draggable(map._mapPane, map._container);
 
 			this._draggable.on({
 				'dragstart': this._onDragStart,
@@ -33,6 +31,8 @@ L.Map.Drag = L.Handler.extend({
 			if (map.options.worldCopyJump) {
 				this._draggable.on('predrag', this._onPreDrag, this);
 				map.on('viewreset', this._onViewReset, this);
+
+				map.whenReady(this._onViewReset, this);
 			}
 		}
 		this._draggable.enable();
@@ -83,17 +83,17 @@ L.Map.Drag = L.Handler.extend({
 	},
 
 	_onViewReset: function () {
+		// TODO fix hardcoded Earth values
 		var pxCenter = this._map.getSize()._divideBy(2),
-		    pxWorldCenter = this._map.latLngToLayerPoint(new L.LatLng(0, 0));
+		    pxWorldCenter = this._map.latLngToLayerPoint([0, 0]);
 
 		this._initialWorldOffset = pxWorldCenter.subtract(pxCenter).x;
-		this._worldWidth = this._map.project(new L.LatLng(0, 180)).x;
+		this._worldWidth = this._map.project([0, 180]).x;
 	},
 
 	_onPreDrag: function () {
 		// TODO refactor to be able to adjust map pane position after zoom
-		var map = this._map,
-		    worldWidth = this._worldWidth,
+		var worldWidth = this._worldWidth,
 		    halfWidth = Math.round(worldWidth / 2),
 		    dx = this._initialWorldOffset,
 		    x = this._draggable._newPos.x,
@@ -104,14 +104,14 @@ L.Map.Drag = L.Handler.extend({
 		this._draggable._newPos.x = newX;
 	},
 
-	_onDragEnd: function () {
+	_onDragEnd: function (e) {
 		var map = this._map,
 		    options = map.options,
 		    delay = +new Date() - this._lastTime,
 
-		    noInertia = !options.inertia ||
-		            delay > options.inertiaThreshold ||
-		            !this._positions[0];
+		    noInertia = !options.inertia || delay > options.inertiaThreshold || !this._positions[0];
+
+		map.fire('dragend', e);
 
 		if (noInertia) {
 			map.fire('moveend');
@@ -120,31 +120,32 @@ L.Map.Drag = L.Handler.extend({
 
 			var direction = this._lastPos.subtract(this._positions[0]),
 			    duration = (this._lastTime + delay - this._times[0]) / 1000,
+			    ease = options.easeLinearity,
 
-			    speedVector = direction.multiplyBy(options.easeLinearity / duration),
-			    speed = speedVector.distanceTo(new L.Point(0, 0)),
+			    speedVector = direction.multiplyBy(ease / duration),
+			    speed = speedVector.distanceTo([0, 0]),
 
 			    limitedSpeed = Math.min(options.inertiaMaxSpeed, speed),
 			    limitedSpeedVector = speedVector.multiplyBy(limitedSpeed / speed),
 
-			    decelerationDuration = limitedSpeed / (options.inertiaDeceleration * options.easeLinearity),
+			    decelerationDuration = limitedSpeed / (options.inertiaDeceleration * ease),
 			    offset = limitedSpeedVector.multiplyBy(-decelerationDuration / 2).round();
 
-			L.Util.requestAnimFrame(function () {
-				map.panBy(offset, decelerationDuration, options.easeLinearity);
-			});
+			if (!offset.x || !offset.y) {
+				map.fire('moveend');
+
+			} else {
+				offset = map._limitOffset(offset, map.options.maxBounds);
+
+				L.Util.requestAnimFrame(function () {
+					map.panBy(offset, {
+						duration: decelerationDuration,
+						easeLinearity: ease,
+						noMoveStart: true
+					});
+				});
+			}
 		}
-
-		map.fire('dragend');
-
-		if (options.maxBounds) {
-			// TODO predrag validation instead of animation
-			L.Util.requestAnimFrame(this._panInsideMaxBounds, map, true, map._container);
-		}
-	},
-
-	_panInsideMaxBounds: function () {
-		this.panInsideBounds(this.options.maxBounds);
 	}
 });
 
